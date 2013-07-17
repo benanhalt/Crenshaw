@@ -11,22 +11,39 @@
   (error (concatenate 'string "Expected: '" expected "'")))
 
 (defun match (x)
-  (if (eq *look* x) (getchar) (expected x)))
+  (cond
+    ((eq *look* x)
+     (getchar)
+     (skip-whitespace))
+    (t (expected x))))
 
 (defun addop-p (x)
   (find x '(#\+ #\-)))
 
 (defun getname ()
-  (if (alpha-char-p *look*)
-      (prog1
-          (string-upcase *look*)
-        (getchar))
-      (expected "Name")))
+  (prog2
+      (if (not (alpha-char-p *look*))
+          (expected "Name"))
+
+      (string-upcase
+       (coerce
+        (loop while (alphanumericp *look*)
+           collecting (prog1 *look* (getchar)))
+        'string))
+
+    (skip-whitespace)))
 
 (defun getnum ()
-  (if (digit-char-p *look*)
-      (prog1 *look* (getchar))
-      (expected "Integer")))
+  (prog2
+      (if (not (digit-char-p *look*))
+          (expected "Integer"))
+
+      (coerce
+       (loop while (digit-char-p *look*)
+          collecting (prog1 *look* (getchar)))
+       'string))
+
+  (skip-whitespace))
 
 (defun emit (&rest items)
   (format t "    ~{~a~}" items))
@@ -35,8 +52,13 @@
   (apply #'emit items)
   (format t "~&"))
 
+(defun skip-whitespace ()
+  (loop while (eq #\space *look*)
+       do (getchar)))
+
 (defun init ()
-  (getchar))
+  (getchar)
+  (skip-whitespace))
 
 (defun ident ()
   (let ((name (getname)))
